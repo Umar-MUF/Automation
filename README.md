@@ -1,7 +1,7 @@
 # Automation
 
 ## Overview
-This repository hosts my automation projects built with [n8n](https://n8n.io/). Currently, it includes two workflows: "ATS Score Prediction" and "Integrate Gemini to Predict Score." Each project is designed to showcase automation techniques using Google services and AI.
+This repository hosts my automation projects built with [n8n](https://n8n.io/).Each project is designed to showcase automation techniques using Google services and AI.
 
 ---
 
@@ -29,7 +29,7 @@ This workflow automates the evaluation of resumes to predict ATS (Applicant Trac
    ```bash
    git clone https://github.com/Umar-MUF/Automation.git
 
-Contributing:
+######Contributing:
 Contributions are welcome! If you'd like to improve any project, please follow these steps:
 
 1.Fork the repository.
@@ -39,7 +39,7 @@ Contributions are welcome! If you'd like to improve any project, please follow t
 5.Submit a pull request with a clear description of your changes.
 6.Feel free to open an issue for bugs, suggestions, or questions!
 
-Contact:
+######Contact:
 For questions, collaboration, or feedback, reach out to me at:
 
 Email: muf.muhammadumarfarooq@gmail.com
