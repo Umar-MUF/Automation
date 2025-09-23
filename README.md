@@ -28,6 +28,7 @@ This workflow automates the evaluation of resumes to predict ATS (Applicant Trac
 1. Clone the repository:
    ```bash
    git clone https://github.com/Umar-MUF/Automation.git
+---
 
 ## Contributing:
 Contributions are welcome! If you'd like to improve any project, please follow these steps:
@@ -38,9 +39,11 @@ Contributions are welcome! If you'd like to improve any project, please follow t
 4.Push to your branch: git push origin feature-name.
 5.Submit a pull request with a clear description of your changes.
 6.Feel free to open an issue for bugs, suggestions, or questions!
+---
 
 ## Contact:
 For questions, collaboration, or feedback, reach out to me at:
 
 Email: muf.muhammadumarfarooq@gmail.com
 LinkedIn: https://tinyurl.com/2wbwtctf
+---
