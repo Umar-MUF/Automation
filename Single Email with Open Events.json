@@ -1,0 +1,460 @@
+{
+  "name": "Single Full Email",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "mail",
+        "fromEmail": "=connect@cvlabz.com",
+        "fromName": "=CV LABZ",
+        "toEmail": "={{ $json.body.to }}",
+        "subject": "={{ $json.body.subject }}",
+        "contentType": "text/html",
+        "contentValue": "={{ $json.body.body }}",
+        "additionalFields": {
+          "categories": "={{ $json.body.campaignkey }}"
+        }
+      },
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        0
+      ],
+      "id": "061e5ef5-c60a-4a79-81da-ff483554bbb7",
+      "name": "CampaignA",
+      "alwaysOutputData": true,
+      "credentials": {
+        "sendGridApi": {
+          "id": "ep1xKilMhaGLv5GN",
+          "name": "SendGrid account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "single-email",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        0
+      ],
+      "id": "f63e1b80-20cd-4d7e-b74b-b9e289fa4652",
+      "name": "Webhook",
+      "webhookId": "b19021d9-8e73-4ad5-88b5-603cd0510918"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Generate one professional email for this campaign. The email must have:\n\n1. A unique 15-word subject line\n2. A 150-word body content in simple HTML format (use <p> tags for paragraphs, <strong> for bold, <a href=\"\"> for links if needed; no complex styles or images)\n3. Professional, engaging tone\n4. Clear call-to-action\n5. No spam trigger words\n6. No emojis\n\nCampaign Detail: {{ $json.body.campaignName }}\n\nOutput Format:\nSubject: [15-word subject line]\nBody: [150-word body text in HTML]\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        48,
+        0
+      ],
+      "id": "c0b8f163-bc55-4e08-bedc-6e9d9239ba82",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "iOjnXgh42ZI5Fv2F",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get LLM output (different nodes can return in slightly different formats)\nconst llmOutput =\n  $input.first().json.message?.content ||   // from OpenAI ChatModel\n  $input.first().json.text ||               // from LLM chain\n  '';\n\n// Check if we got content\nif (!llmOutput) {\n  throw new Error('No content received from LLM node');\n}\n\n// Extract subject\nconst subjectMatch = llmOutput.match(/Subject:\\s*(.+?)(?=\\nBody:|$)/si);\nconst subject = subjectMatch?.[1]?.trim() || \"Default Subject Line\";\n\n// Extract body\nconst bodyMatch = llmOutput.match(/Body:\\s*([\\s\\S]+)/i);\nconst body = bodyMatch?.[1]?.trim() || \"<p>Default body content</p>\";\n\n// Return clean JSON\nreturn [\n  {\n    json: {\n      subject,\n      body\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ],
+      "id": "c5dd18d4-32c2-468a-80da-bc91a2eb5189",
+      "name": "Extracting info from text"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the input data from the previous node\nconst inputData = $input.all();\n\n// Extract emails and create the output array\nconst output = inputData.map(() => ({\n  email:$('Webhook').first().json.body.email\n}));\n\n// Return the formatted output\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "0234f2ae-4a7f-43ae-8a87-323bd49fe086",
+      "name": "select email"
+    },
+    {
+      "parameters": {
+        "jsCode": "function toCampaignKey(str) {\n  if (!str) return \"\";\n  return str\n    .trim()                       // remove leading/trailing spaces\n    .toLowerCase()                // normalize case\n    .replace(/[^a-z0-9]+/g, \"_\")  // replace non-alphanumeric with underscore\n    .replace(/^_+|_+$/g, \"\")      // trim leading/trailing underscores\n    .slice(0, 50);                // limit length (50 chars max)\n}\n\n// Take input from Code1\nconst input = $('Webhook').first().json.body;\n\n// Normalize campaign\nconst campaignText = $('Webhook').first().json.body.campaignName || \"\";\nconst campaignKey = toCampaignKey(campaignText);\n\nreturn [{\n  json: {\n    ...input,                // keep versionA, versionB, groups, etc.\n    groups: {\n      ...input.groups,\n      campaign: {\n        text: campaignText,\n        key: campaignKey     // add normalized short key\n      }\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "3e639b42-0af3-4f21-9acc-2ab8daad6581",
+      "name": "sanitizing campaign"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n  campaignkey:$('Webhook2').first().json.body.campaignkey,\n  campaign:$('Webhook2').first().json.body.campaign, \n  subject:$('Webhook2').first().json.body.subject,\n  body: $('Webhook2').first().json.body.body,\n    clicks : 0\n  \n  },\n  \n}];\n\n\n "
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1872,
+        0
+      ],
+      "id": "b9eb50cc-adb4-44ee-a7c7-8b89e71bb2aa",
+      "name": "Returning output"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "collection": "Single_Email",
+        "fields": "campaignkey,campaign,subject,body,clicks",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [
+        2112,
+        0
+      ],
+      "id": "6408423b-d25a-4dde-b49f-94c31fa9a7e8",
+      "name": "Insert documents",
+      "credentials": {
+        "mongoDb": {
+          "id": "BrxlfoqsygdgV2jq",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "single_email",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        176,
+        368
+      ],
+      "id": "da2d5b22-4a97-4e3d-a2a7-c2e6bd6fbeec",
+      "name": "Webhook1",
+      "webhookId": "c375e29a-b31f-4e89-b0ea-fe81adcc9131"
+    },
+    {
+      "parameters": {
+        "jsCode": "let results = [];\n\nconst body = items[0].json.body;\n\n// If the incoming body is an array (like your Postman example)\nif (Array.isArray(body)) {\n  results = body\n    .filter(event => event.event === \"open\")\n    .map(event => {\n      const campaignkey = event.category?.[0] || \"Unknown\";\n      return {\n        json: {\n          campaignkey,\n          timestamp: event.timestamp\n        }\n      };\n    });\n} else if (body && body.event === \"open\") {\n  // If it's a single object (not array)\n  const campaignkey = body.category?.[0] || \"Unknown\";\n  results.push({\n    json: {\n      campaignkey,\n      timestamp: body.timestamp\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        368
+      ],
+      "id": "d2b08476-e2ab-46b6-b73a-94998d247347",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "const { campaignkey, timestamp } = $json;\n\nif (!campaignkey || campaignkey === \"Unknown\") {\n  return [{ json: { skip: true, reason: \"missing campaignkey\", original: $json } }];\n}\n\nreturn [{\n  json: {\n    query: { campaignkey: campaignkey },   // 👈 must match field you stored in MongoDB docs\n    update: {\n      $inc: { clicks: 1 },\n      $set: { lastEventAt: new Date(timestamp * 1000).toISOString() }\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        368
+      ],
+      "id": "2403b511-59cf-45b4-a944-f52401a9248f",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "collection": "Single_Email",
+        "options": {},
+        "query": "={\"campaignkey\": \"{{ $json.query.campaignkey }}\"}"
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        368
+      ],
+      "id": "9cdda805-be8d-491a-9182-ea2132f58c5c",
+      "name": "Find documents",
+      "credentials": {
+        "mongoDb": {
+          "id": "BrxlfoqsygdgV2jq",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "findOneAndUpdate",
+        "collection": "Single_Email",
+        "updateKey": "campaignkey",
+        "fields": "campaignkey,campaign,subject,body,clicks",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [
+        1392,
+        368
+      ],
+      "id": "95c34e7d-4cf5-48e6-833f-9b8433bdc8d2",
+      "name": "Find and update documents",
+      "credentials": {
+        "mongoDb": {
+          "id": "BrxlfoqsygdgV2jq",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n  campaignkey:$input.first().json.campaignkey,\n  campaign:$input.first().json.campaign, \n  subject:$input.first().json.subject,\n  body:$input.first().json.body,\n    clicks : $('Code1').first().json.update.$inc.clicks + $input.first().json.clicks\n  \n  },\n  \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        368
+      ],
+      "id": "b83fa6b3-8b6a-444a-8a05-6425e7002618",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://delightful-passion-production.up.railway.app/emails/emailA",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "CampaignName",
+              "value": "={{ $json.campaignName }}"
+            },
+            {
+              "name": "Campaignkey",
+              "value": "={{ $json.groups.campaign.key }}"
+            },
+            {
+              "name": "Email",
+              "value": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1104,
+        0
+      ],
+      "id": "3b42b730-fe9e-4a45-81dc-94eea00b1e33",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "Receive-Email",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1424,
+        0
+      ],
+      "id": "6e990cc4-c6d6-4ca3-8826-bf0e7c3db30a",
+      "name": "Webhook2",
+      "webhookId": "c75423bd-3636-483e-80ce-35ba34261f39"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CampaignA": {
+      "main": [
+        [
+          {
+            "node": "Returning output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Extracting info from text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extracting info from text": {
+      "main": [
+        [
+          {
+            "node": "select email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "select email": {
+      "main": [
+        [
+          {
+            "node": "sanitizing campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sanitizing campaign": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Returning output": {
+      "main": [
+        [
+          {
+            "node": "Insert documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Find documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find documents": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Find and update documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook2": {
+      "main": [
+        [
+          {
+            "node": "CampaignA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "77581108-37b0-4002-b2ed-481bd2ce6c14",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c8bdf8e7a99b67bfab71b3dca93da24d61c18dc4503f376206904a5d1bd81a74"
+  },
+  "id": "0QzGbF6f2CyV69dO",
+  "tags": []
+}
