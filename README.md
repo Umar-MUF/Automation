@@ -30,6 +30,36 @@ This workflow automates the evaluation of resumes to predict ATS (Applicant Trac
    git clone https://github.com/Umar-MUF/Automation.git
 ---
 
+### 2. Single Email with Open Events
+#### Overview
+This workflow automates the creation, sending, and tracking of professional email campaigns using n8n, integrating SendGrid, MongoDB, and GPT-4o-mini AI.
+
+#### Features
+
+- Receives email details via webhook and generates a unique 15-word subject and 150-word body using GPT-4o-mini.
+- Sends emails via SendGrid with a sanitized campaign key.
+- Stores email data (campaign, subject, body, clicks) in MongoDB.
+- Tracks email opens and updates click counts in real-time.
+- Integrates with an external API (via HTTP request) for additional processing.
+
+#### Getting Started
+##### Prerequisites
+
+- n8n installed.
+- SendGrid API key with email-sending permissions.
+- MongoDB database access with credentials.
+- OpenAI API key for GPT-4o-mini.
+- Access to an external API endpoint for HTTP node.
+
+
+
+##### Usage
+
+- Send a POST request to the single-email webhook with campaignName, to, subject, and body fields.
+- Monitor email sends and track opens via the Receive-Email webhook.
+- View stored data and click counts in the MongoDB  collection.
+
+
 ## Contributing:
 Contributions are welcome! If you'd like to improve any project, please follow these steps:
 
