@@ -58,7 +58,7 @@ This workflow automates the creation, sending, and tracking of professional emai
 - Send a POST request to the single-email webhook with campaignName, to, subject, and body fields.
 - Monitor email sends and track opens via the Receive-Email webhook.
 - View stored data and click counts in the MongoDB  collection.
-
+---
 
 ## Contributing:
 Contributions are welcome! If you'd like to improve any project, please follow these steps:
